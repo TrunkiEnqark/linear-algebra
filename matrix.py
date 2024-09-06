@@ -34,7 +34,24 @@ class Matrix:
     def transpose(self):
         return Matrix([[self.matrix[i][j] for i in range(self.rows)] for j in range(self.cols)])
     
+    @staticmethod
+    def identity(n):
+        return Matrix([[1 if i == j else 0 for j in range(n)] for i in range(n)])
+    
+    def determinant(self):
+        if self.cols != self.rows:
+            raise ValueError("Matrix muse be square")
+        if self.rows == 1:
+            return self.matrix[0][0]
+        if self.rows == 2:
+            return self.matrix[0][0] * self.matrix[1][1] - self.matrix[0][1] * self.matrix[1][0]
+        det = 0
+        for j in range(self.rows):
+            submatrix = Matrix([row[:j] + row[j+1:] for row in self.matrix[1:]])
+            det += (-1)**j * self.matrix[0][j] * submatrix.determinant()
+        return det
+    
 if __name__ == '__main__':
-    A = Matrix([[1, 2, 3], [4, 5, 6]])
-    B = Matrix([[3, 4], [9, 8], [6, 7]])
-    print(A * B)
+    A = Matrix([[1, 2, 3], [3, 2, 1], [2, 1, 3]])
+    B = Matrix([[3, 4, 5], [9, 8, 3], [6, 7, 7]])
+    print(A.determinant())
