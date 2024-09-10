@@ -1,5 +1,6 @@
 import math
 from sympy import symbols, solve
+from sympy import Matrix as SymPyMatrix
 
 class Matrix:
     def __init__(self, data):
@@ -41,9 +42,25 @@ class Matrix:
             return Matrix([[self.matrix[i][j] / val for j in range(self.cols)] for i in range(self.rows)])
         else:
             raise ValueError("Unsupported operation for __truediv__ with type: {}".format(type(val)))
+    
+    def __eq__(self, other):
+        if self.rows != other.rows or self.cols != other.cols:
+            return False
+        
+        for i in range(self.rows):
+            for j in range(self.cols):
+                if self.matrix[i][j] != other.matrix[i][j]:
+                    return False
+        return True
 
     def transpose(self):
         return Matrix([[self.matrix[i][j] for i in range(self.rows)] for j in range(self.cols)])
+
+    def is_symmetric(self):
+        return self == self.transpose()
+    
+    def is_square(self):
+        return self.cols == self.rows
     
     @staticmethod
     def identity(n):
@@ -53,7 +70,7 @@ class Matrix:
         return Matrix([row[:j] + row[j+1:] for row in (self.matrix[:i] + self.matrix[i+1:])])
     
     def determinant(self):
-        if self.cols != self.rows:
+        if not self.is_square():
             raise ValueError("Matrix muse be square")
         if self.rows == 1:
             return self.matrix[0][0]
@@ -65,7 +82,7 @@ class Matrix:
         return det
     
     def cofactor(self):
-        if self.cols != self.rows:
+        if not self.is_square():
             raise ValueError("Matrix is not invertible")
         
         n = self.rows
@@ -91,7 +108,7 @@ class Matrix:
         n = self.rows
         m = self.cols
         original = [row[:] for row in self.matrix]
-        if n == m:
+        if self.is_square():
             identity = Matrix.identity(n).matrix
         else:
             identity = None
@@ -131,38 +148,71 @@ class Matrix:
     def rank(self):
         return self.gauss_jordan()[0]   
     
-    def eigenvalues(self):
+    def eigen_equation(self):
+        if not self.is_square():
+            raise ValueError("Matrix must be square")
         λ = symbols('λ')
-        # det(A - λ*I) = 0
-        equation = Matrix([
+        return Matrix([
             [self.matrix[i][j] - (λ if i == j else 0) for j in range(self.cols)]
             for i in range(self.rows)
-        ]).determinant()
+        ])
+    
+    def eigenvalues(self):
+        if not self.is_square():
+            raise ValueError("Matrix must be square")
+        λ = symbols('λ')
+        # det(A - λ*I) = 0
+        equation = self.eigen_equation().determinant()
         
         eigenvalues = solve(equation, λ) # use sympy to solve this equation
         return eigenvalues
     
     def eigenvectors(self):
-        pass
-    
+        if not self.is_square():
+            raise ValueError("Matrix must be square")
+        
+        eigenvectors = []
+        eigenvalues = self.eigenvalues()
+        for eigenvalue in eigenvalues:
+            null_space = SymPyMatrix([
+                [self.matrix[i][j] - (eigenvalue if i == j else 0) for j in range(self.cols)]
+                for i in range(self.rows)
+            ]).nullspace()
+            
+            for vec in null_space:
+                eigenvectors.append([coord for coord in vec])
+        
+        return eigenvectors
+
     def is_positive_definite(self):
-        pass
+        if not self.is_square():
+            raise ValueError("Matrix must be square")
+        if not self.is_symmetric():
+            raise ValueError("Matrix must be symmetric")
+        
+        return all(e > 1.0e-12 for e in self.eigenvalues())
     
     def diagonalize(self):
         pass
     
-    def is_positive_definite(self):
-        pass
-    
+    # using Frobenius Norm
+    # https://mathworld.wolfram.com/FrobeniusNorm.html
     def norm(self):
-        pass
+        total = sum(self.matrix[i][j]**2 for i in range(self.rows) for j in range(self.cols))
+        return total ** 0.5
     
-    def vector_norm(self):
-        pass
+    # using L^2 norm
+    # https://mathworld.wolfram.com/L2-Norm.html
+    @staticmethod
+    def vector_norm(vector):
+        total = sum(x ** 2 for x in vector)
+        return total ** 0.5
     
 if __name__ == '__main__':
     A = Matrix([[1.3, 2.1, 3.5], [3.3, 2.1, 1.2], [2.8, 1.0, 3.4]])
-    B = Matrix([[-5, 2], [-7, 4]])
-    print(B.eigenvalues())
+    B = Matrix([[3, 2, 4],
+                [2, 0, 2],
+                [4, 2, 3]])
+    print(B.is_positive_definite())
     # print(B.inverse())
     # print(B.gauss_jordan()[1])
