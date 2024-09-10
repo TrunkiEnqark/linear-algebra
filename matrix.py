@@ -1,4 +1,3 @@
-import math
 from sympy import symbols, solve
 from sympy import Matrix as SymPyMatrix
 
@@ -49,7 +48,7 @@ class Matrix:
         
         for i in range(self.rows):
             for j in range(self.cols):
-                if self.matrix[i][j] != other.matrix[i][j]:
+                if abs(self.matrix[i][j] - other.matrix[i][j]) > 1.0e-12:
                     return False
         return True
 
@@ -193,7 +192,24 @@ class Matrix:
         return all(e > 1.0e-12 for e in self.eigenvalues())
     
     def diagonalize(self):
-        pass
+        if not self.is_square():
+            raise ValueError("Matrix must be square")
+
+        eigenvalues = self.eigenvalues()
+        eigenvectors = self.eigenvectors()
+
+        if len(eigenvectors) != self.rows:
+            raise ValueError("Matrix is not diagonalizable")
+
+        P = Matrix([[vec[i] for vec in eigenvectors] for i in range(self.rows)])
+        D = Matrix([[eigenvalues[i] if i == j else 0 for j in range(self.cols)] for i in range(self.rows)])
+        # P*D*P^(-1)
+        result = P * D * P.inverse()
+        
+        if all(abs(result.matrix[i][j] - self.matrix[i][j]) < 1.0e-12 for i in range(self.rows) for j in range(self.cols)):
+            return P, D
+        else:
+            raise ValueError("Matrix is not diagonalizable")
     
     # using Frobenius Norm
     # https://mathworld.wolfram.com/FrobeniusNorm.html
@@ -205,7 +221,7 @@ class Matrix:
     # https://mathworld.wolfram.com/L2-Norm.html
     @staticmethod
     def vector_norm(vector):
-        total = sum(x ** 2 for x in vector)
+        total = sum(x**2 for x in vector)
         return total ** 0.5
     
 if __name__ == '__main__':
